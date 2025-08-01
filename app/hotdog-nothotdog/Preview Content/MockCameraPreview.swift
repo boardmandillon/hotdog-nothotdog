@@ -1,5 +1,5 @@
 //
-//  s.swift
+//  MockCameraPreview.swift
 //  hotdog-nothotdog
 //
 //  Created by boardmandillon on 30/12/2024.
