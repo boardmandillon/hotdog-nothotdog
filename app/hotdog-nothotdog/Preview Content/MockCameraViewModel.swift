@@ -1,12 +1,11 @@
 //
-//  s.swift
+//  MockCameraViewModel.swift
 //  hotdog-nothotdog
 //
 //  Created by boardmandillon on 30/12/2024.
 //
 
 import SwiftUI
-import AVFoundation
 
 class MockCameraViewModel: CameraViewModel {
 

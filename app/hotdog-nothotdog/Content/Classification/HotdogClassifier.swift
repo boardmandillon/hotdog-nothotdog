@@ -9,47 +9,60 @@ import CoreML
 import Vision
 import SwiftUI
 
-let model = try! hotdog_classifier(configuration: .init())
+enum Classification: String {
+    case hotdog = "🌭 HOTDOG 🌭"
+    case notHotdog = "❌ NOTHOTDOG ❌"
+}
 
-func classifyImage(_ uiImage: UIImage, completion: @escaping (String) -> Void) {
-    guard let model = try? VNCoreMLModel(for: hotdog_classifier().model) else {
-        completion("model loading failed")
+enum ClassificationError: Error, CustomStringConvertible {
+    case modelFailed
+    case invalidImage
+    case requestFailed(Error)
+    case noResult
+
+    var description: String {
+        switch self {
+        case .modelFailed: return "Model loading failed"
+        case .invalidImage: return "Invalid image"
+        case .requestFailed(let error): return "Request failed: \(error.localizedDescription)"
+        case .noResult: return "No classification result"
+        }
+    }
+}
+
+func classifyImage(_ uiImage: UIImage, completion: @escaping (Result<Classification, ClassificationError>) -> Void) {
+    guard let cgImage = uiImage.cgImage else {
+        completion(.failure(.invalidImage))
         return
     }
 
-    // create a request
+    guard let model = try? VNCoreMLModel(for: hotdog_classifier().model) else {
+        completion(.failure(.modelFailed))
+        return
+    }
+
     let request = VNCoreMLRequest(model: model) { request, error in
         if let error = error {
-            completion("ERROR: \(error.localizedDescription)")
+            completion(.failure(.requestFailed(error)))
             return
         }
 
         guard let results = request.results as? [VNCoreMLFeatureValueObservation],
               let probability = results.first?.featureValue.multiArrayValue?[0].floatValue else {
-            completion("No prediction found")
+            completion(.failure(.noResult))
             return
         }
 
-        // interpret the probability
-        if probability >= 0.5 {
-            completion("nothotdog")
-        } else {
-            completion("hotdog")
-        }
-    }
-
-    // run the request on a background thread
-    guard let cgImage = uiImage.cgImage else {
-        completion("invalid image")
-        return
+        let classification: Classification = probability >= 0.5 ? .notHotdog : .hotdog
+        completion(.success(classification))
     }
 
     let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-    DispatchQueue.global().async {
+    DispatchQueue.global(qos: .userInitiated).async {
         do {
             try handler.perform([request])
         } catch {
-            completion("failed to perform request: \(error.localizedDescription)")
+            completion(.failure(.requestFailed(error)))
         }
     }
 }

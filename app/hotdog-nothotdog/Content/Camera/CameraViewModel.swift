@@ -12,8 +12,8 @@ class CameraViewModel: NSObject, ObservableObject {
     @Published var session = AVCaptureSession()
     @Published var classifiedImage: ClassifiedImage?
 
+    var previewLayer: AVCaptureVideoPreviewLayer?
     private let output = AVCapturePhotoOutput()
-    private var previewLayer: AVCaptureVideoPreviewLayer?
 
     override init() {
         super.init()
@@ -46,25 +46,39 @@ class CameraViewModel: NSObject, ObservableObject {
     }
 
     func startSession() {
-        if !session.isRunning {
-            session.startRunning()
+        DispatchQueue.global(qos: .userInitiated).async {
+            if !self.session.isRunning {
+                self.session.startRunning()
+            }
         }
     }
 
     func stopSession() {
-        if session.isRunning {
-            session.stopRunning()
+        DispatchQueue.global(qos: .userInitiated).async {
+            if self.session.isRunning {
+                self.session.stopRunning()
+            }
         }
     }
 }
 
 extension CameraViewModel: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        if let data = photo.fileDataRepresentation(),
-           let image = UIImage(data: data) {
-            classifyImage(image) { result in
-                DispatchQueue.main.async {
-                    self.classifiedImage = ClassifiedImage(image: image, classification: result)
+        guard let data = photo.fileDataRepresentation(),
+              let image = UIImage(data: data),
+              let previewLayer = previewLayer,
+              let croppedImage = image.cropToVisibleSquare(previewLayer: previewLayer)
+        else {
+            return
+        }
+
+        classifyImage(croppedImage) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let classification):
+                    self.classifiedImage = ClassifiedImage(image: croppedImage, classification: classification.rawValue)
+                case .failure(let error):
+                    self.classifiedImage = ClassifiedImage(image: croppedImage, classification: "Error: \(error.description)")
                 }
             }
         }

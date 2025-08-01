@@ -19,6 +19,40 @@ struct ContentView: View {
                 MockCameraPreview().edgesIgnoringSafeArea(.all)
             }
 
+            ZStack {
+                GeometryReader { geo in
+                    let screenSize = geo.size
+
+                    let safeAreaFrame = geo.safeAreaInsets
+                    let safeHeight = screenSize.height - safeAreaFrame.top - safeAreaFrame.bottom
+                    let safeWidth = screenSize.width - safeAreaFrame.leading - safeAreaFrame.trailing
+                    let overlaySize = min(safeWidth, safeHeight) * 0.6
+
+                    let centerX = screenSize.width / 2
+                    let centerY = screenSize.height / 2
+
+                    ZStack {
+                        Color.black.opacity(0.5)
+                            .mask {
+                                Rectangle()
+                                    .fill(style: FillStyle(eoFill: true))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .frame(width: overlaySize, height: overlaySize)
+                                            .position(x: centerX, y: centerY)
+                                            .blendMode(.destinationOut)
+                                    )
+                            }
+
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.white, lineWidth: 5)
+                            .frame(width: overlaySize, height: overlaySize)
+                            .position(x: centerX, y: centerY)
+                    }
+                }
+            }
+            .ignoresSafeArea()
+
             // main content
             VStack {
                 Text("hotdog-nothotdog")
@@ -41,7 +75,7 @@ struct ContentView: View {
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.black)
-                        .padding(EdgeInsets(top: 20, leading: 0, bottom: 10, trailing: 0))
+                        .padding(.top, 20)
 
                     Image(uiImage: cameraViewModel.classifiedImage!.image)
                         .resizable()
