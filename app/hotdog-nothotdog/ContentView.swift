@@ -69,19 +69,38 @@ struct ContentView: View {
             }
 
             // popup modal
-            AnimatedModalView(item: $cameraViewModel.classifiedImage) {_ in
+            AnimatedModalView(item: $cameraViewModel.classificationResultWrapper) { wrapper in
                 VStack {
-                    Text(cameraViewModel.classifiedImage!.classification)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.black)
-                        .padding(.top, 20)
+                    switch wrapper.result {
+                    case .failure(let error):
+                        Text("Error")
+                            .font(.title2)
+                            .foregroundColor(.red)
+                            .padding(.top, 20)
 
-                    Image(uiImage: cameraViewModel.classifiedImage!.image)
-                        .resizable()
-                        .scaledToFit()
-                        .border(Color.black, width: 4)
-                        .padding(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                        Text(error.description)
+                            .font(.body)
+                            .multilineTextAlignment(.center)
+                            .padding()
+
+                    case .success(let result):
+                        Text(result.label.rawValue)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.black)
+                            .padding(.top, 20)
+
+                        Image(uiImage: result.image)
+                            .resizable()
+                            .scaledToFit()
+                            .border(Color.black, width: 4)
+                            .padding(.horizontal, 20)
+
+                        Text("According to our calculations, there is a \(Int(result.confidence * 100))% probability of this being a \(result.label.rawValue)")
+                            .foregroundColor(.black)
+                            .multilineTextAlignment(.center)
+                            .padding(20)
+                    }
                 }
             }
         }

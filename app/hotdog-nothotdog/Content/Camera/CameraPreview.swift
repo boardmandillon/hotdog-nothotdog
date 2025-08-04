@@ -35,12 +35,6 @@ struct CameraPreview: UIViewControllerRepresentable {
     }
 }
 
-struct ClassifiedImage: Identifiable, Equatable {
-    let id = UUID()
-    let image: UIImage
-    let classification: String
-}
-
 extension UIImage {
     func cropToVisibleSquare(previewLayer: AVCaptureVideoPreviewLayer) -> UIImage? {
         guard let cgImage = self.cgImage else { return nil }

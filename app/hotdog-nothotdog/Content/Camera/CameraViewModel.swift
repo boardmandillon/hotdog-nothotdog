@@ -10,7 +10,7 @@ import AVFoundation
 
 class CameraViewModel: NSObject, ObservableObject {
     @Published var session = AVCaptureSession()
-    @Published var classifiedImage: ClassifiedImage?
+    @Published var classificationResultWrapper: ClassificationResultWrapper?
 
     var previewLayer: AVCaptureVideoPreviewLayer?
     private let output = AVCapturePhotoOutput()
@@ -72,14 +72,9 @@ extension CameraViewModel: AVCapturePhotoCaptureDelegate {
             return
         }
 
-        classifyImage(croppedImage) { result in
+        classifyImage(croppedImage) { wrapper in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let classification):
-                    self.classifiedImage = ClassifiedImage(image: croppedImage, classification: classification.rawValue)
-                case .failure(let error):
-                    self.classifiedImage = ClassifiedImage(image: croppedImage, classification: "Error: \(error.description)")
-                }
+                self.classificationResultWrapper = wrapper
             }
         }
     }

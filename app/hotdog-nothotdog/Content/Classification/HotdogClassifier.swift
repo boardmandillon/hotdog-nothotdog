@@ -9,12 +9,28 @@ import CoreML
 import Vision
 import SwiftUI
 
-enum Classification: String {
-    case hotdog = "🌭 HOTDOG 🌭"
-    case notHotdog = "❌ NOTHOTDOG ❌"
+
+struct ClassificationResultWrapper: Identifiable, Equatable {
+    let id = UUID()
+    let result: Result<ClassificationResult, ClassificationError>
+
+    static func ==(lhs: ClassificationResultWrapper, rhs: ClassificationResultWrapper) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
-enum ClassificationError: Error, CustomStringConvertible {
+struct ClassificationResult: Equatable {
+    enum Label: String {
+        case hotdog = "hotdog"
+        case notHotdog = "nothotdog"
+    }
+
+    let image: UIImage
+    let label: Label
+    let confidence: Float
+}
+
+enum ClassificationError: Error, CustomStringConvertible, Equatable {
     case modelFailed
     case invalidImage
     case requestFailed(Error)
@@ -28,33 +44,40 @@ enum ClassificationError: Error, CustomStringConvertible {
         case .noResult: return "No classification result"
         }
     }
+
+    static func ==(lhs: ClassificationError, rhs: ClassificationError) -> Bool {
+        lhs.description == rhs.description // Simplified comparison
+    }
 }
 
-func classifyImage(_ uiImage: UIImage, completion: @escaping (Result<Classification, ClassificationError>) -> Void) {
+func classifyImage(_ uiImage: UIImage, completion: @escaping (ClassificationResultWrapper) -> Void) {
     guard let cgImage = uiImage.cgImage else {
-        completion(.failure(.invalidImage))
+        completion(.init(result: .failure(.invalidImage)))
         return
     }
 
     guard let model = try? VNCoreMLModel(for: hotdog_classifier().model) else {
-        completion(.failure(.modelFailed))
+        completion(.init(result: .failure(.modelFailed)))
         return
     }
 
     let request = VNCoreMLRequest(model: model) { request, error in
         if let error = error {
-            completion(.failure(.requestFailed(error)))
+            completion(.init(result: .failure(.requestFailed(error))))
             return
         }
 
         guard let results = request.results as? [VNCoreMLFeatureValueObservation],
               let probability = results.first?.featureValue.multiArrayValue?[0].floatValue else {
-            completion(.failure(.noResult))
+            completion(.init(result: .failure(.noResult)))
             return
         }
 
-        let classification: Classification = probability >= 0.5 ? .notHotdog : .hotdog
-        completion(.success(classification))
+        let label: ClassificationResult.Label = probability >= 0.5 ? .notHotdog : .hotdog
+        let confidence = label == .notHotdog ? probability : 1 - probability
+
+        let result = ClassificationResult(image: uiImage, label: label, confidence: confidence)
+        completion(.init(result: .success(result)))
     }
 
     let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
@@ -62,7 +85,7 @@ func classifyImage(_ uiImage: UIImage, completion: @escaping (Result<Classificat
         do {
             try handler.perform([request])
         } catch {
-            completion(.failure(.requestFailed(error)))
+            completion(.init(result: .failure(.requestFailed(error))))
         }
     }
 }

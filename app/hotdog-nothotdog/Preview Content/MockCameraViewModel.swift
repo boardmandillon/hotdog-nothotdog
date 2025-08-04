@@ -19,7 +19,9 @@ class MockCameraViewModel: CameraViewModel {
 
     override func capturePhoto() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            self.classifiedImage = ClassifiedImage(image: UIImage(systemName: "photo")!, classification: "nothotdog")
+            self.classificationResultWrapper = ClassificationResultWrapper(
+                result: .success(ClassificationResult(image: UIImage(systemName: "photo")!, label: .hotdog, confidence: 0.95))
+            )
         }
     }
 }
